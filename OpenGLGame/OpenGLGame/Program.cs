@@ -10,10 +10,65 @@ using OpenTK.Graphics.OpenGL;
 
 namespace OpenGLGame
 {
+    struct ColouredVertex
+    {
+        public const int Size = (3 + 4) * 4;
+
+        private readonly Vector3 position;
+        private readonly Color4 color;
+
+        public ColouredVertex(Vector3 pos, Color4 col)
+        {
+            position = pos;
+            color = col;
+        }
+    }
+
+    sealed class VertexBuffer<TVertex> where TVertex : struct
+    {
+        private readonly int vertexSize;
+        private TVertex[] vertices = new TVertex[4];
+
+        private int count;
+
+        private readonly int handle;
+
+        public VertexBuffer(int vertexSize)
+        {
+            this.vertexSize = vertexSize;
+
+            handle = GL.GenBuffer();
+        }
+
+        public void AddVertex(TVertex v)
+        {
+            if (count == vertices.Length)
+            {
+                Array.Resize(ref vertices, count * 2);
+            }
+
+            vertices[count] = v;
+            count++;
+        }
+        
+        public void Bind()
+        {
+            GL.BindBuffer(BufferTarget.ArrayBuffer, handle);
+        }
+
+        public void BufferData()
+        {
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(vertexSize * count), vertices, BufferUsageHint.StreamDraw);
+        }
+
+        public void Draw()
+        {
+            GL.DrawArrays(PrimitiveType.Triangles, 0, count);
+        }
+    }
+
     sealed class GameWindow : OpenTK.GameWindow
     {
-        uint vertexbuffer;
-
         public GameWindow() : base(1280, 720, GraphicsMode.Default, "HELLO WURLD", GameWindowFlags.Default, DisplayDevice.Default, 3, 0, GraphicsContextFlags.ForwardCompatible)
         {
             Console.WriteLine("OpenGL version: " + GL.GetString(StringName.Version));
@@ -26,29 +81,12 @@ namespace OpenGLGame
 
         protected override void OnLoad(EventArgs e)
         {
-            GL.GenVertexArrays(1, out uint VertexArrayID);
-            GL.BindVertexArray(VertexArrayID);
 
-            float[] g_vertex_buffer_data = {
-                -1.0f, -1.0f, 0.0f,
-                1.0f, -1.0f, 0.0f,
-                0.0f, 1.0f, 0.0f
-            };
-
-            GL.GenBuffers(1, out vertexbuffer);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, vertexbuffer);
-            GL.BufferData(BufferTarget.ArrayBuffer, g_vertex_buffer_data.Length, g_vertex_buffer_data, BufferUsageHint.StaticDraw);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
-            GL.EnableVertexAttribArray(0);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, vertexbuffer);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
-
-            GL.DrawArrays(BeginMode.Triangles, 0, 3);
-            GL.DisableVertexAttribArray(0);
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
